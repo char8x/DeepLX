@@ -2,7 +2,7 @@
  * @Author: Vincent Young
  * @Date: 2022-10-18 07:32:29
  * @LastEditors: Vincent Young
- * @LastEditTime: 2023-11-19 19:21:24
+ * @LastEditTime: 2023-11-28 00:24:20
  * @FilePath: /DeepLX/README.md
  * @Telegram: https://t.me/missuo
  * 
@@ -26,11 +26,12 @@
 [7]: https://img.shields.io/github/v/release/OwO-Network/DeepLX?logo=smartthings
 
 ## **Related Projects**
-| Link                                       | Description                            | Maintainer        |
-| ------------------------------------------ | -------------------------------------- | ----------------- |
-| [OwO-Network/PyDeepLX](https://github.com/OwO-Network/PyDeepLX) | Python Package for DeepLX              | OwO-Network       |
-| [OwO-Network/gdeeplx](https://github.com/OwO-Network/gdeeplx)   | Golang Package for DeepLX              | OwO-Network       |
-| [ifyour/deeplx](https://github.com/ifyour/deeplx)               | JS Package for DeepLX (JavaScript)     | ifyour            |
+| Link                                                                | Description                         | Maintainer                                                      |
+| ------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
+| [OwO-Network/PyDeepLX](https://github.com/OwO-Network/PyDeepLX)     | Python Package for DeepLX           | [Vincent Yang](https://github.com/missuo)                       |
+| [OwO-Network/gdeeplx](https://github.com/OwO-Network/gdeeplx)       | Golang Package for DeepLX           | [Vincent Yang](https://github.com/missuo)                       |
+| [ifyour/deeplx](https://github.com/ifyour/deeplx)                   | JS Package for DeepLX (JavaScript)  | [ifyour](https://github.com/ifyour)                             |
+| [deeplx-serverless](https://github.com/LegendLeo/deeplx-serverless) | Serverless Package for DeepLX       | [LegendLeo](https://github.com/LegendLeo/deeplx-serverless)     |
 
 ## Discussion Group
 [Telegram Group](https://t.me/+8KDGHKJCxEVkNzll)
@@ -41,39 +42,35 @@
 - `DeepLX` is unlimited to the number of requests.
 
 ## Usage
-### Request Parameters
+### For Developer
+#### Request Parameters
 - text: string
 - source_lang: string
 - target_lang: string
 
-### Response
+#### Response
 ```json
 {
   "alternatives": [
-    "no one else",
-    "there is no other person (idiom); there is no one else",
-    "there is no other person"
+    "Did you hear about this?",
+    "You've heard about this?",
+    "You've heard of this?"
   ],
   "code": 200,
-  "data": "there is no one else",
-  "id": 8352115005,
+  "data": "Have you heard about this?",
+  "id": 8356681003,
+  "method": "Free",
   "source_lang": "ZH",
   "target_lang": "EN"
 }
 ```
-### Specify the port (Optional)
-**Thanks to [cijiugechu](https://github.com/cijiugechu) for [his contribution](https://github.com/OwO-Network/DeepLX/commit/4a0920579ea868b0f05ccdff6bceae316bfd5dc8) to make this feature possible for this project!**
-```bash
-./deeplx -p 3333
-# or
-./deeplx -port 3333
-```
-### Set access password (Optional)
-**To prevent abuse of your public API, you can use a token to restrict translation requests.**
-```bash
-./deeplx -token hellodeeplx
-```
+### Custom Options
+**The following settings are optional and not required.**
+- `-port` or `-p` : Listening port. Default is `1188`.
+- `-token` : Access token. If you have set it up, each request needs to include `Authorization` in the **Headers** or `token` parameter in the **URL Params**.
+- `-authkey` : DeepL Official `AuthKey`. If you have set it up, after the 429 response, the official AuthKey will be used for the request. If multiple authKeys are used simultaneously, they need to be separated by commas.
 
+#### Requesting a token-protected **DeepLX API** instance using the `curl`
 ```
 curl -X POST http://localhost:1188/translate \
 -H "Content-Type: application/json" \
@@ -83,7 +80,16 @@ curl -X POST http://localhost:1188/translate \
     "source_lang": "EN",
     "target_lang": "DE"
 }'
-
+```
+or
+```
+curl -X POST http://localhost:1188/translate?token=your_access_token \
+-H "Content-Type: application/json" \
+-d '{
+    "text": "Hello, world!",
+    "source_lang": "EN",
+    "target_lang": "DE"
+}'
 ```
 
 ### Run with Docker
@@ -91,18 +97,26 @@ curl -X POST http://localhost:1188/translate \
 # ghcr.io
 docker run -itd -p 1188:1188 ghcr.io/owo-network/deeplx:latest
 
+# custom environment variables
+docker run -itd -p 1188:1188 -e "TOKEN=helloxxx" -e "AUTHKEY=xxxx:fx" ghcr.io/owo-network/deeplx:latest
+
 # dockerhub
 docker run -itd -p 1188:1188 missuo/deeplx:latest
+
+# custom environment variables
+docker run -itd -p 1188:1188 -e "TOKEN=helloxxx" -e "AUTHKEY=xxxx:fx" missuo/deeplx:latest
 ```
 
 ### Run with Docker Compose
 ```bash
 mkdir deeplx
 cd deeplx
-wget https://raw.githubusercontent.com/OwO-Network/DeepLX/main/docker-compose.yaml
-# docker compose v1
-docker-compose up -d
-# or docker compose v2
+wget https://raw.githubusercontent.com/OwO-Network/DeepLX/main/compose.yaml
+# modify environment variables
+# environment:
+  # - TOKEN=helloxxx
+  # - AUTHKEY=xxxxxxx:fx
+# docker compose
 docker compose up -d
 ```
 
@@ -110,12 +124,11 @@ docker compose up -d
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/OwO-Network/DeepLX/main/install.sh)
 # or
-bash <(curl -Ls https://qwq.mx/deeplx)
+bash <(curl -Ls https://owo.nz/deeplx)
 ```
 
 ### Run on Mac
 #### Homebrew (Recommended)
-**Homebrew has been fixed in the latest version and works perfectly.**
 ```bash
 brew tap owo-network/brew
 brew install deeplx
@@ -157,13 +170,19 @@ After installation, start the daemon with the following command.
 ```bash
 systemctl daemon-reload
 systemctl enable deeplx
-
 ```
+
+**Special thanks to [AsukaMinato](https://github.com/asukaminato0721) for maintaining the updates of [ArchLinux packages](https://aur.archlinux.org/packages/deeplx-bin).**
+
+### Run on Sealos
+
+[![](https://raw.githubusercontent.com/labring-actions/templates/main/Deploy-on-Sealos.svg)](https://cloud.sealos.io/?openapp=system-template%3FtemplateName%3Ddeeplx)
+
 ## Setup on [Bob App](https://bobtranslate.com/)
 1. Install [bob-plugin-deeplx](https://github.com/missuo/bob-plugin-deeplx) on Bob.
 
 2. Setup the API. (If you use Brew to install locally you can skip this step)
-![c5c19dd89df6fae1a256d](https://missuo.ru/file/c5c19dd89df6fae1a256d.png)
+![c5c19dd89df6fae1a256d](./img/c5c19dd89df6fae1a256d.png)
 
 ## Setup on [immersive-translate](https://github.com/immersive-translate/immersive-translate)
 **It is not recommended, because the `immersive-translate` will send many requests in a short time, which will cause the `DeepL API` to block your IP.**
@@ -174,7 +193,7 @@ systemctl enable deeplx
 
 3. Set the URL. (If you are not deploying locally, you need to change 127.0.0.1 to the IP of your server)
 
-![6a48ba28621f2465028f0](https://missuo.ru/file/6a48ba28621f2465028f0.png)
+![6a48ba28621f2465028f0](./img/6a48ba28621f2465028f0.png)
 
 ## Use in Python
 ```python
@@ -198,6 +217,17 @@ print(r)
 docker run -itd -p 1188:80 missuo/deeplx-bk
 ```
 **This docker image is not related to this project, as the original author deleted the image, it is only for backup.**
+
+## Acknowledgements
+
+### Contributors
+
+<a href="https://github.com/OwO-Network/DeepLX/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=OwO-Network/DeepLX&anon=0" />
+</a>
+
+## Activity
+![Alt](https://repobeats.axiom.co/api/embed/5f473f85db27cb30028a2f3db7a560f3577a4860.svg "Repobeats analytics image")
 
 ## License
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FOwO-Network%2FDeepLX.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FOwO-Network%2FDeepLX?ref=badge_large)
