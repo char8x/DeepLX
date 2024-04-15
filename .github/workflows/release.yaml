@@ -6,6 +6,10 @@ on:
   workflow_dispatch:
 
 name: Release
+
+permissions:
+  contents: write
+
 jobs:
   Build:
     if: startsWith(github.ref, 'refs/tags/v')
