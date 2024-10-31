@@ -1,14 +1,15 @@
 /*
  * @Author: Vincent Yang
  * @Date: 2023-07-01 21:45:34
- * @LastEditors: Vincent Yang
- * @LastEditTime: 2024-06-18 02:41:55
+ * @LastEditors: Vincent Young
+ * @LastEditTime: 2024-09-16 12:12:35
  * @FilePath: /DeepLX/main.go
  * @Telegram: https://t.me/missuo
  * @GitHub: https://github.com/missuo
  *
  * Copyright © 2024 by Vincent, All Rights Reserved.
  */
+
 package main
 
 import (
@@ -19,6 +20,7 @@ import (
 	"os"
 	"strings"
 
+	translate "github.com/OwO-Network/DeepLX/translate"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -57,6 +59,20 @@ func authMiddleware(cfg *Config) gin.HandlerFunc {
 	}
 }
 
+type PayloadFree struct {
+	TransText   string `json:"text"`
+	SourceLang  string `json:"source_lang"`
+	TargetLang  string `json:"target_lang"`
+	TagHandling string `json:"tag_handling"`
+}
+
+type PayloadAPI struct {
+	Text        []string `json:"text"`
+	TargetLang  string   `json:"target_lang"`
+	SourceLang  string   `json:"source_lang"`
+	TagHandling string   `json:"tag_handling"`
+}
+
 func main() {
 	cfg := initConfig()
 
@@ -81,9 +97,6 @@ func main() {
 	if cfg.Token != "" {
 		fmt.Println("Access token is set.")
 	}
-	if cfg.AuthKey != "" {
-		fmt.Println("DeepL Official Authentication key is set.")
-	}
 
 	// Setting the application to release mode
 	gin.SetMode(gin.ReleaseMode)
@@ -106,10 +119,19 @@ func main() {
 		sourceLang := req.SourceLang
 		targetLang := req.TargetLang
 		translateText := req.TransText
-		authKey := cfg.AuthKey
+		tagHandling := req.TagHandling
+
 		proxyURL := cfg.Proxy
 
-		result, err := translateByDeepLX(sourceLang, targetLang, translateText, authKey, proxyURL)
+		if tagHandling != "" && tagHandling != "html" && tagHandling != "xml" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    http.StatusBadRequest,
+				"message": "Invalid tag_handling value. Allowed values are 'html' and 'xml'.",
+			})
+			return
+		}
+
+		result, err := translate.TranslateByDeepLX(sourceLang, targetLang, translateText, tagHandling, proxyURL)
 		if err != nil {
 			log.Fatalf("Translation failed: %s", err)
 		}
@@ -141,9 +163,18 @@ func main() {
 		sourceLang := req.SourceLang
 		targetLang := req.TargetLang
 		translateText := req.TransText
+		tagHandling := req.TagHandling
 		proxyURL := cfg.Proxy
 
 		dlSession := cfg.DlSession
+
+		if tagHandling != "" && tagHandling != "html" && tagHandling != "xml" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    http.StatusBadRequest,
+				"message": "Invalid tag_handling value. Allowed values are 'html' and 'xml'.",
+			})
+			return
+		}
 
 		cookie := c.GetHeader("Cookie")
 		if cookie != "" {
@@ -164,7 +195,7 @@ func main() {
 			return
 		}
 
-		result, err := translateByDeepLXPro(sourceLang, targetLang, translateText, dlSession, proxyURL)
+		result, err := translate.TranslateByDeepLXPro(sourceLang, targetLang, translateText, tagHandling, dlSession, proxyURL)
 		if err != nil {
 			log.Fatalf("Translation failed: %s", err)
 		}
@@ -190,16 +221,7 @@ func main() {
 
 	// Free API endpoint, Consistent with the official API format
 	r.POST("/v2/translate", authMiddleware(cfg), func(c *gin.Context) {
-		authorizationHeader := c.GetHeader("Authorization")
-		var authKey string
 		proxyURL := cfg.Proxy
-
-		if strings.HasPrefix(authorizationHeader, "DeepL-Auth-Key") {
-			parts := strings.Split(authorizationHeader, " ")
-			if len(parts) >= 2 && strings.HasSuffix(parts[len(parts)-1], ":fx") {
-				authKey = parts[len(parts)-1]
-			}
-		}
 
 		var translateText string
 		var targetLang string
@@ -225,7 +247,7 @@ func main() {
 			targetLang = jsonData.TargetLang
 		}
 
-		result, err := translateByDeepLX("", targetLang, translateText, authKey, proxyURL)
+		result, err := translate.TranslateByDeepLX("", targetLang, translateText, "", proxyURL)
 		if err != nil {
 			log.Fatalf("Translation failed: %s", err)
 		}
